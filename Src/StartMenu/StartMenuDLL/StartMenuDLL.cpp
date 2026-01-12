@@ -18,6 +18,9 @@
 #include "dllmain.h"
 #include <uxtheme.h>
 #include <dwmapi.h>
+#ifdef _IS_REACTOS_
+#include "..\StartMenuHelper\ReactOS_COM_Shim.h"
+#endif
 #include <htmlhelp.h>
 #include <dbghelp.h>
 #include <set>
@@ -450,6 +453,29 @@ STARTMENUAPI HWND FindTaskBar( DWORD process )
 	g_WinStartButton=NULL;
 	g_TaskBar=NULL;
 	g_Tooltip=NULL;
+#if defined(_IS_REACTOS_)
+	// ReactOS-specific logic to find the taskbar and start button
+	// 1. Find Shell_TrayWnd
+	g_TaskBar = FindWindowEx(GetDesktopWindow(), NULL, L"Shell_TrayWnd", NULL);
+	if (g_TaskBar)
+	{
+		// 2. Find the start button by traversing the window hierarchy
+		HWND rebar = FindWindowEx(g_TaskBar, NULL, L"ReBarWindow32", NULL);
+		if (rebar)
+		{
+			HWND toolbar = FindWindowEx(rebar, NULL, L"ToolbarWindow32", NULL);
+			if (toolbar)
+			{
+				g_WinStartButton = FindWindowEx(toolbar, NULL, L"BUTTON", NULL);
+			}
+		}
+	}
+#elif defined(_IS_WINE_)
+	// Wine-specific logic (currently defaults to standard Windows behavior)
+	EnumWindows(FindTaskBarEnum, process);
+	if (!g_TaskBar)
+		g_TaskBar = FindWindowEx(GetDesktopWindow(), NULL, L"Shell_TrayWnd", NULL);
+#else
 	// find the taskbar
 	EnumWindows(FindTaskBarEnum,process);
 	if (!g_TaskBar)
@@ -476,6 +502,7 @@ STARTMENUAPI HWND FindTaskBar( DWORD process )
 			g_OwnerWindow=g_Owner.Create(NULL,0,0,WS_POPUP,WS_EX_TOOLWINDOW|WS_EX_TOPMOST);
 		}
 	}
+#endif
 	return g_TaskBar;
 }
 
@@ -4284,6 +4311,10 @@ HBITMAP GetStartScreenIcon( int size )
 }
 
 // WH_GETMESSAGE hook for the explorer's GUI thread. The start menu exe uses this hook to inject code into the explorer process
+#if defined(_IS_REACTOS_)
+CComPtr<IShellFolder> g_pReactOSDesktop;
+#endif
+
 STARTMENUAPI LRESULT CALLBACK HookInject( int code, WPARAM wParam, LPARAM lParam )
 {
 	if (code==HC_ACTION && !g_TaskBar)
@@ -4293,6 +4324,14 @@ STARTMENUAPI LRESULT CALLBACK HookInject( int code, WPARAM wParam, LPARAM lParam
 
 STARTMENUAPI void InitManagers( bool bNohook )
 {
+#if defined(_IS_REACTOS_)
+	if (FAILED(CReactOSShellFolder::CreateInstance(IID_IShellFolder, (void**)&g_pReactOSDesktop)))
+	{
+		LogToFile(STARTUP_LOG, L"Failed to create ReactOS desktop folder instance.");
+	}
+#elif defined(_IS_WINE_)
+	// Wine-specific COM initialization (if any) will go here
+#endif
 	InitializeSkinManager(bNohook);
 	g_ItemManager.Init(); // must be after skin manager because it uses the metro colors
 	g_SearchManager.Init();

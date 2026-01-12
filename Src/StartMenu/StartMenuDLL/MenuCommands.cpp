@@ -2601,6 +2601,38 @@ void CMenuContainer::ActivateItem( int index, TActivateType type, const POINT *p
 		res=0;
 	}
 
+static HRESULT GetShellFolderForNewItem( CComPtr<IShellFolder> &pFolder, const CMenuContainer *pContainer, const ActivateData *pData )
+{
+	CComPtr<IShellFolder> pDesktop;
+#if defined(_IS_REACTOS_)
+	if (g_pReactOSDesktop)
+	{
+		pDesktop = g_pReactOSDesktop;
+	}
+	else
+	{
+		return E_FAIL;
+	}
+#else
+	if (FAILED(SHGetDesktopFolder(&pDesktop)))
+		return E_FAIL;
+#endif
+
+	PCUITEMID_CHILD pidl = nullptr;
+	if (pData && pData->bProgramsTree)
+		pidl = pData->parent;
+	else
+		pidl = pContainer->m_Path1[0];
+
+    if (!pidl)
+    {
+        pFolder = pDesktop;
+        return S_OK;
+    }
+
+	return pDesktop->BindToObject(pidl, NULL, IID_IShellFolder, (void**)&pFolder);
+}
+
 	if (res==CMD_NEWFOLDER)
 	{
 		g_RenameText=item.name;
@@ -2623,17 +2655,9 @@ void CMenuContainer::ActivateItem( int index, TActivateType type, const POINT *p
 			PCUITEMID_CHILD pidl;
 			SHBindToParent(pItemPidl1,IID_IShellFolder,(void**)&pFolder,&pidl);
 		}
-		else if (pData && pData->bProgramsTree)
-		{
-			CComPtr<IShellFolder> pDesktop;
-			if (SUCCEEDED(SHGetDesktopFolder(&pDesktop)))
-				pDesktop->BindToObject(pData->parent,NULL,IID_IShellFolder,(void**)&pFolder);
-		}
 		else
 		{
-			CComPtr<IShellFolder> pDesktop;
-			if (SUCCEEDED(SHGetDesktopFolder(&pDesktop)))
-				pDesktop->BindToObject(m_Path1[0],NULL,IID_IShellFolder,(void**)&pFolder);
+			GetShellFolderForNewItem(pFolder, this, pData);
 		}
 
 		if (pFolder)
