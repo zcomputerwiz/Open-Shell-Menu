@@ -1,6 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug_ReactOS|Win32">
+      <Configuration>Debug_ReactOS</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_ReactOS|x64">
+      <Configuration>Debug_ReactOS</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_ReactOS|Win32">
+      <Configuration>Release_ReactOS</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_ReactOS|x64">
+      <Configuration>Release_ReactOS</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_Wine|Win32">
+      <Configuration>Debug_Wine</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_Wine|x64">
+      <Configuration>Debug_Wine</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_Wine|Win32">
+      <Configuration>Release_Wine</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_Wine|x64">
+      <Configuration>Release_Wine</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|ARM64">
       <Configuration>Debug</Configuration>
       <Platform>ARM64</Platform>
@@ -59,6 +91,16 @@
     <Import Project="..\..\Common.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug_ReactOS' Or '$(Configuration)'=='Release_ReactOS'">
+    <ClCompile>
+      <PreprocessorDefinitions>_USRDLL;CLASSICSTARTMENUDLL_EXPORTS;_IS_REACTOS_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug_Wine' Or '$(Configuration)'=='Release_Wine'">
+    <ClCompile>
+      <PreprocessorDefinitions>_USRDLL;CLASSICSTARTMENUDLL_EXPORTS;_IS_WINE_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>_USRDLL;CLASSICSTARTMENUDLL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>

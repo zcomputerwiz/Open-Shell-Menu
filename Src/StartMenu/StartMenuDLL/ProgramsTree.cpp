@@ -1570,7 +1570,11 @@ HRESULT CProgramsTree::Drop( IDataObject *pDataObj, DWORD grfKeyState, POINTL pt
 
 	// must use IShellFolder to get to the drop target because the BindToHandler doesn't support passing the parent window (easily)
 	CComPtr<IShellFolder> pDesktop;
+#ifdef _IS_REACTOS_
+		pDesktop = g_pReactOSDesktop;
+#else
 	SHGetDesktopFolder(&pDesktop);
+#endif
 	CComPtr<IShellFolder> pFolder;
 	CComPtr<IDropTarget> pTarget;
 	if (!pDesktop || FAILED(pDesktop->BindToObject(dropFolder,NULL,IID_IShellFolder,(void**)&pFolder)) || FAILED(pFolder->CreateViewObject(g_OwnerWindow,IID_IDropTarget,(void**)&pTarget)))

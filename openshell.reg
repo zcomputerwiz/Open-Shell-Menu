@@ -1,0 +1,8 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\CLSID\{D9144DCD-E629-4B2C-9A52-258169865187}\InprocServer32]
+@="%SystemRoot%\\system32\\StartMenuDLL.dll"
+"ThreadingModel"="Apartment"
+
+[HKEY_CLASSES_ROOT\CLSID\{D9144DCD-E629-4B2C-9A52-258169865187}\ShellEx\ContextMenuHandlers\OpenShell]
+@="{D9144DCD-E629-4B2C-9A52-258169865187}"
