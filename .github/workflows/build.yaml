@@ -46,7 +46,7 @@ jobs:
     - name: Run Open-Shell Build Script
       shell: cmd
       run: |
-        call "%GITHUB_WORKSPACE%\Src\__MakeFinal.bat"
+        call "%GITHUB_WORKSPACE%\Src\Setup\__MakeFinal.bat"
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
