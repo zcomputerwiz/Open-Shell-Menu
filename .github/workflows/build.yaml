@@ -17,17 +17,25 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
-
-    - name: Install WiX Toolset v3.14
+  
+    - name: Setup WiX Toolset (v3.14)
       run: |
-        dotnet tool install --global wix --version 3.14.0 || true
-        # Also install via Chocolatey for MSBuild integration consistency
-        choco install wixtoolset --version 3.11.2 -y 
+        # WiX 3.14 is usually pre-installed on the runner image.
+        # We find it and add it to the PATH so __MakeFinal.bat can see 'candle.exe', etc.
+        if (Test-Path "C:\Program Files (x86)\WiX Toolset v3.14\bin") {
+          echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" >> $env:GITHUB_PATH
+          echo "WIX=C:\Program Files (x86)\WiX Toolset v3.14" >> $env:GITHUB_ENV
+        } else {
+          # Fallback: If for some reason it's missing, install it with force
+          choco install wixtoolset --version 3.14.1 --force -y
+          echo "WIX=C:\Program Files (x86)\WiX Toolset v3.14" >> $env:GITHUB_ENV
+        }
 
     - name: Install HTML Help Workshop
       run: |
+        # Use --ignore-dependencies if it conflicts with existing VS components
         choco install html-help-workshop -y
-        echo "C:\Program Files (x86)\HTML Help Workshop" >> $GITHUB_PATH
+        echo "C:\Program Files (x86)\HTML Help Workshop" >> $env:GITHUB_PATH
 
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1
