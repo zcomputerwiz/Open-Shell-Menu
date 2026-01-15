@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022 # Specifically 2022 to match modern VS requirements
+    runs-on: windows-2022
 
     steps:
     - name: Checkout Repository
@@ -17,25 +17,25 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
-  
+    
     - name: Setup WiX Toolset (v3.14)
+      shell: pwsh
       run: |
-        # WiX 3.14 is usually pre-installed on the runner image.
-        # We find it and add it to the PATH so __MakeFinal.bat can see 'candle.exe', etc.
-        if (Test-Path "C:\Program Files (x86)\WiX Toolset v3.14\bin") {
-          echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" >> $env:GITHUB_PATH
-          echo "WIX=C:\Program Files (x86)\WiX Toolset v3.14" >> $env:GITHUB_ENV
-        } else {
-          # Fallback: If for some reason it's missing, install it with force
+        $wixPath = "C:\Program Files (x86)\WiX Toolset v3.14"
+        $binPath = Join-Path $wixPath "bin"
+    
+        if (-not (Test-Path $binPath)) {
           choco install wixtoolset --version 3.14.1 --force -y
-          echo "WIX=C:\Program Files (x86)\WiX Toolset v3.14" >> $env:GITHUB_ENV
         }
+    
+        Add-Content -Path $env:GITHUB_PATH -Value $binPath
+        Add-Content -Path $env:GITHUB_ENV -Value "WIX=$wixPath"
 
     - name: Install HTML Help Workshop
+      shell: pwsh
       run: |
-        # Use --ignore-dependencies if it conflicts with existing VS components
         choco install html-help-workshop -y
-        echo "C:\Program Files (x86)\HTML Help Workshop" >> $env:GITHUB_PATH
+        Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\HTML Help Workshop"
 
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1
@@ -45,11 +45,8 @@ jobs:
 
     - name: Run Open-Shell Build Script
       shell: cmd
-      working-directory: Src/Setup
       run: |
-        # We call the bat file directly as per repo instructions
-        # Note: __MakeFinal.bat usually calls msbuild internally
-        call __MakeFinal.bat
+        call "%GITHUB_WORKSPACE%\Src\__MakeFinal.bat"
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
