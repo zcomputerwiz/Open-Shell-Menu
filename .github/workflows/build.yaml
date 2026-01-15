@@ -41,7 +41,7 @@ jobs:
       uses: NuGet/setup-nuget@v1
 
     - name: Restore NuGet Packages
-      run: nuget restore "${{ github.workspace }}\Src\Open-Shell.sln"
+      run: nuget restore "${{ github.workspace }}\Src\OpenShell.sln"
 
     - name: Run Open-Shell Build Script
       shell: cmd
