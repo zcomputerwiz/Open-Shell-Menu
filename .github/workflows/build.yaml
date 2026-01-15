@@ -1,0 +1,53 @@
+name: Full Build (Binaries & Installers)
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022 # Specifically 2022 to match modern VS requirements
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install WiX Toolset v3.14
+      run: |
+        dotnet tool install --global wix --version 3.14.0 || true
+        # Also install via Chocolatey for MSBuild integration consistency
+        choco install wixtoolset --version 3.11.2 -y 
+
+    - name: Install HTML Help Workshop
+      run: |
+        choco install html-help-workshop -y
+        echo "C:\Program Files (x86)\HTML Help Workshop" >> $GITHUB_PATH
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
+
+    - name: Restore NuGet Packages
+      run: nuget restore Src/Open-Shell.sln
+
+    - name: Run Open-Shell Build Script
+      shell: cmd
+      working-directory: Src/Setup
+      run: |
+        # We call the bat file directly as per repo instructions
+        # Note: __MakeFinal.bat usually calls msbuild internally
+        call __MakeFinal.bat
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Open-Shell-Final-Setup
+        path: |
+          Src/Setup/Final/*.exe
+          Src/Setup/Final/*.msi
+          Src/Setup/Final/*.zip
