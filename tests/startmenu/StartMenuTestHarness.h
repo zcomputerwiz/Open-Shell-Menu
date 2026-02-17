@@ -1,145 +1,118 @@
 #pragma once
 
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
-/**
- * BEHAVIORAL REFERENCE MODEL - PHASE 2
- *
- * This file is part of the Start Menu Behavioral Reference Model.
- * It encodes the normative behavioral specifications for the Open-Shell Start Menu.
- *
- * NOTE: This is a SIMULATOR. It is not yet bound to the actual production code in Src/.
- * In Phase 3, production code will be refactored to be validated against this model.
- */
+#include "../../Src/StartMenu/Abstraction/StubImplementations/StubShellIntegration.h"
 
-// Mock Win32/Shell constants and types for the reference model
-typedef void* HWND;
-typedef unsigned int UINT;
-typedef unsigned long long WPARAM;
-typedef long long LPARAM;
+namespace StartMenuTests {
 
-#define WM_NULL 0x0000
-#define WM_CREATE 0x0001
-#define WM_DESTROY 0x0002
-#define WM_CLOSE 0x0010
-#define WM_ACTIVATE 0x0006
-#define WA_INACTIVE 0
-#define WM_KEYDOWN 0x0100
-#define WM_LBUTTONDOWN 0x0201
-#define WM_HOTKEY 0x0312
+using StartMenu::Abstraction::CreateStubShellIntegration;
+using StartMenu::Abstraction::IMenuDataProvider;
+using StartMenu::Abstraction::IRegistryProvider;
+using StartMenu::Abstraction::IShellIntegration;
+using StartMenu::Abstraction::MenuItem;
+using StartMenu::Abstraction::PlatformCapabilityFlags;
+using StartMenu::Abstraction::StartMenuConfiguration;
 
-#define VK_ESCAPE 0x1B
-#define VK_RETURN 0x0D
-#define VK_UP     0x26
-#define VK_DOWN   0x28
-
-#define LOWORD(l) ((unsigned short)((unsigned long)(l) & 0xffff))
-
-/**
- * Start Menu States as defined in docs/startmenu_behavior_contract.md
- */
-enum class StartMenuState {
-    Closed,
-    OpenRoot,
-    OpenSubmenu,
-    Searching
-};
-
-/**
- * The StartMenuTestHarness provides a mockable environment for testing
- * Start Menu behavioral logic. In Phase 2, this serves as a simulator
- * that encodes the current documented behavior of Open-Shell.
- */
-class StartMenuTestHarness {
+class MockRegistryProvider final : public IRegistryProvider {
 public:
-    StartMenuTestHarness() : m_State(StartMenuState::Closed), m_AppLaunched(false) {}
-
-    // --- Actions (Triggers from Inventory) ---
-
-    void PressWinKey() {
-        // Behavioral Inventory 1.1 & 1.2: Windows key toggles the menu
-        HandleMessage(WM_HOTKEY, 0, 0);
-    }
-
-    void ClickStartButton() {
-        // Behavioral Inventory 1.3: Click on start button toggles the menu
-        HandleMessage(WM_LBUTTONDOWN, 0, 0);
-    }
-
-    void ClickOutside() {
-        // Behavioral Inventory 1.4: Menu closes on deactivation
-        HandleMessage(WM_ACTIVATE, WA_INACTIVE, 0);
-    }
-
-    void PressEscape() {
-        // Behavioral Inventory 1.5: Escape key closes the top-most menu level
-        HandleMessage(WM_KEYDOWN, VK_ESCAPE, 0);
-    }
-
-    void HoverFolder() {
-        // Behavioral Inventory 2.1: Hovering opens a submenu
-        if (m_State == StartMenuState::OpenRoot || m_State == StartMenuState::OpenSubmenu) {
-            m_State = StartMenuState::OpenSubmenu;
+    bool TryReadString(const std::string& key, const std::string& valueName, std::string& outValue) const override {
+        const auto it = stringData.find(key + ":" + valueName);
+        if (it == stringData.end()) {
+            return false;
         }
+        outValue = it->second;
+        return true;
     }
 
-    void LaunchApplication() {
-        // Behavioral Inventory 2.2: Launching an app closes the menu
-        m_AppLaunched = true;
-        m_State = StartMenuState::Closed;
-    }
-
-    void TypeInSearch(const std::string& text) {
-        // Behavioral Inventory 3.1: Typing initiates/updates search
-        if (m_State == StartMenuState::OpenRoot || m_State == StartMenuState::Searching) {
-            m_SearchText = text;
-            m_State = text.empty() ? StartMenuState::OpenRoot : StartMenuState::Searching;
+    bool TryReadBool(const std::string& key, const std::string& valueName, bool& outValue) const override {
+        const auto it = boolData.find(key + ":" + valueName);
+        if (it == boolData.end()) {
+            return false;
         }
+        outValue = it->second;
+        return true;
     }
 
-    // --- State Queries ---
+    void WriteString(const std::string& key, const std::string& valueName, const std::string& value) override {
+        stringData[key + ":" + valueName] = value;
+    }
 
-    StartMenuState GetState() const { return m_State; }
-    bool WasAppLaunched() const { return m_AppLaunched; }
-    std::string GetSearchText() const { return m_SearchText; }
+    void WriteBool(const std::string& key, const std::string& valueName, bool value) override {
+        boolData[key + ":" + valueName] = value;
+    }
 
 private:
-    /**
-     * Internal state machine that encodes behaviors documented in the contract.
-     */
-    void HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
-        switch (msg) {
-            case WM_HOTKEY:
-            case WM_LBUTTONDOWN:
-                if (m_State == StartMenuState::Closed) {
-                    m_State = StartMenuState::OpenRoot;
-                } else {
-                    m_State = StartMenuState::Closed;
-                }
-                break;
-            case WM_ACTIVATE:
-                if (LOWORD(wParam) == WA_INACTIVE) {
-                    m_State = StartMenuState::Closed;
-                }
-                break;
-            case WM_KEYDOWN:
-                if (wParam == VK_ESCAPE) {
-                    if (m_State == StartMenuState::OpenSubmenu) {
-                        m_State = StartMenuState::OpenRoot;
-                    } else {
-                        m_State = StartMenuState::Closed;
-                    }
-                }
-                break;
-            case WM_CLOSE:
-                m_State = StartMenuState::Closed;
-                break;
-        }
+    std::map<std::string, std::string> stringData;
+    std::map<std::string, bool> boolData;
+};
+
+class FakeMenuDataProvider final : public IMenuDataProvider {
+public:
+    std::vector<MenuItem> EnumerateRootItems() const override { return fixedTree; }
+
+    std::vector<MenuItem> fixedTree{{"root-programs", "Programs", true,
+        {{"notepad", "Notepad", false, {}}, {"paint", "Paint", false, {}}}}};
+};
+
+
+
+class FakeHotkeyManager {
+public:
+    bool Register(const std::string& id) {
+        registrations.push_back(id);
+        return true;
     }
 
-    StartMenuState m_State;
-    bool m_AppLaunched;
-    std::string m_SearchText;
+    bool WasRegistered(const std::string& id) const {
+        for (const auto& value : registrations) {
+            if (value == id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+private:
+    std::vector<std::string> registrations;
 };
+
+struct PlatformCapabilityConstants {
+    static constexpr bool kDefaultRunningOnWine = false;
+    static constexpr bool kDefaultRunningOnReactOS = false;
+};
+
+class TestEnvironmentGuard {
+public:
+    explicit TestEnvironmentGuard(PlatformCapabilityFlags& flagsRef)
+        : flags(flagsRef), saved(flagsRef) {}
+
+    ~TestEnvironmentGuard() { flags = saved; }
+
+private:
+    PlatformCapabilityFlags& flags;
+    PlatformCapabilityFlags saved;
+};
+
+class StartMenuTestHarness {
+public:
+    explicit StartMenuTestHarness(const PlatformCapabilityFlags& flags = {})
+        : integration(CreateStubShellIntegration(flags)) {
+        integration->Initialize();
+    }
+
+    IShellIntegration& Shell() { return *integration; }
+    const IShellIntegration& Shell() const { return *integration; }
+
+private:
+    std::unique_ptr<IShellIntegration> integration;
+};
+
+} // namespace StartMenuTests
+
+// [CODEX] Last modified by: Codex
+// [CODEX] Phase: 3
+// [CODEX] Summary: Replaced Win32 simulator with abstraction-driven test harness helpers.

@@ -51,3 +51,40 @@ stateDiagram-v2
 
 ### 4.3. Explorer Integration
 - The menu monitors for `TaskbarCreated` message to re-establish hooks if Explorer restarts.
+
+## 5. Contract IDs for Test Mapping
+
+- `menu-open-on-hotkey`: Win key or registered start hotkey opens/closes menu.
+- `registry-drives-config`: persisted settings alter runtime menu configuration.
+- `start-button-replacement`: initialization can replace/intercept start button behavior.
+- `skin-load-fallback`: missing skin resources fall back to a default skin safely.
+- `multi-monitor-fallback`: menu functions correctly with a single-monitor fallback path.
+- `menu-population`: shell namespace/provider data is transformed into menu entries.
+- `wine-feature-degradation`: high-risk shell features degrade gracefully on Wine.
+
+<!-- WINDOWS-SPECIFIC: Taskbar positioning currently depends on SHAppBarMessage calls in Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:605 and MenuContainer.cpp:8196. -->
+<!-- WINDOWS-SPECIFIC: Foreground handling currently relies on AllowSetForegroundWindow in Src/StartMenu/StartMenu.cpp:657 and SetForegroundWindow usage in StartMenuDLL code paths. -->
+<!-- WINDOWS-SPECIFIC: TaskbarCreated monitoring uses RegisterWindowMessage("TaskbarCreated") in Src/StartMenu/StartMenu.cpp:693. -->
+<!-- WINDOWS-SPECIFIC: Menu visual effects rely on DwmExtendFrameIntoClientArea in Src/StartMenu/StartMenuDLL/MenuContainer.cpp:4429. -->
+<!-- NEEDS ABSTRACTION: Start button and taskbar integration traverse Shell_TrayWnd/TrayNotifyWnd class hierarchy in Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:456 and 3141. -->
+
+## Portability Assessment
+
+### Fully Portable
+- State machine semantics for Closed/OpenRoot/OpenSubmenu/Searching.
+- Search transition rules and Escape-driven close semantics.
+
+### Requires Shim
+- Hotkey registration and dispatch (`RegisterHotKey`) should be behind `IHotkeyManager`.
+- Taskbar position and start-button interception should be behind `ITaskbarAccess`.
+- Settings persistence should be behind `IRegistryProvider`.
+- Skin discovery/loading should be behind `ISkinLoader`.
+
+### Incompatible / Feature-Flag Required
+- DWM composition-only behavior (`DwmExtendFrameIntoClientArea`, `DwmSetWindowAttribute`) should be disabled if unsupported.
+- Explorer window-class assumptions (`Shell_TrayWnd`, `ReBarWindow32`, `TrayNotifyWnd`) require platform mapping or feature gating.
+- Explorer process hook/injection flows (`SetWindowsHookEx` into shell process) require a feature flag in non-native environments.
+
+// [CODEX] Last modified by: Codex
+// [CODEX] Phase: 1
+// [CODEX] Summary: Added contract IDs and portability assessment annotations for abstraction planning.
