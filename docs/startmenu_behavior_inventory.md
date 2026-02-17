@@ -115,3 +115,27 @@ This document lists the observable behaviors of the Open-Shell Start Menu, their
 ### 5.3. Immersive Shell / WinRT Interactions
 - **Ambiguity:** Interactions with the "Immersive Shell" (Win8/10 Start Screen/Menu) are handled via COM interfaces (`IAppVisibility`, `IImmersiveShell`). The exact behavior when both menus might try to open simultaneously is highly OS-version dependent and not fully specified.
 - **Code Location:** `Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp`: ~3050.
+
+## 6. Portability Risk Annotations (Codex)
+
+- 1.1 Open Start Menu via Windows Key <!-- WINE_RISK: MEDIUM --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:3763 WM_HOTKEY path -->
+- 1.2 Close Start Menu via Windows Key <!-- WINE_RISK: MEDIUM --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/MenuContainer.cpp:7559 toggle-to-close path -->
+- 1.3 Start Button Click Toggle <!-- WINE_RISK: HIGH --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:3858 subclass mouse handling -->
+- 1.4 Close on Deactivation <!-- WINE_RISK: LOW --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/MenuContainer.cpp:6411 WA_INACTIVE -->
+- 1.5 Escape Key Close <!-- WINE_RISK: LOW --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/MenuContainer.cpp:5929 keydown handler -->
+- 1.6 Single Instance Enforcement <!-- WINE_RISK: LOW --> <!-- VERIFIED: Src/StartMenu/StartMenu.cpp:650 CreateMutex -->
+- 2.1 Open Submenu on Hover <!-- WINE_RISK: LOW --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/MenuContainer.cpp OnTimer/OpenSubMenu -->
+- 2.2 Launch Application <!-- WINE_RISK: MEDIUM --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/MenuCommands.cpp:1392 and 1654 -->
+- 2.3 Keyboard Navigation <!-- WINE_RISK: LOW --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/MenuContainer.cpp OnKeyDown -->
+- 3.1 Initiate Search <!-- WINE_RISK: LOW --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/MenuContainer.cpp OnEditChange -->
+- 4.1 Shift+Click on Start Button <!-- WINE_RISK: HIGH --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:3848 -->
+- 4.2 Right-Click on Start Button <!-- WINE_RISK: HIGH --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:4063 -->
+- 5.1 Multi-Monitor Taskbar Interaction <!-- WINE_RISK: MEDIUM --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/MenuContainer.cpp CalculateCorner -->
+- 5.2 Drag and Drop onto Start Button <!-- WINE_RISK: MEDIUM --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/DragDrop.cpp IDropTarget path -->
+- 5.3 Immersive Shell / WinRT Interactions <!-- WINE_RISK: HIGH --> <!-- VERIFIED: Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:3050 immersive COM path -->
+
+- Explorer internal class hooking (`Shell_TrayWnd`, `ReBarWindow32`, `TrayNotifyWnd`) is a direct Wine/ReactOS incompatibility risk and needs interface-based shims.
+
+// [CODEX] Last modified by: Codex
+// [CODEX] Phase: 1
+// [CODEX] Summary: Added Wine risk labels and source verification annotations per behavior entry.

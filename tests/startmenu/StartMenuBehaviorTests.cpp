@@ -1,132 +1,143 @@
-/**
- * BEHAVIORAL REFERENCE MODEL TESTS - PHASE 2
- *
- * These tests validate the Behavioral Reference Model (simulator)
- * which serves as the normative specification for the Start Menu.
- *
- * NOTE: These tests validate the specification, not the production code yet.
- */
-
 #include "StartMenuTestHarness.h"
+
+#include <functional>
 #include <iostream>
-#include <cassert>
+#include <string>
+#include <vector>
 
-/**
- * Validates that pressing the Windows Key toggles the menu state.
- * Reference: Behavioral Contract 3.0 / Inventory 1.1 & 1.2
- */
-void TestWinKeyToggle() {
-    StartMenuTestHarness harness;
-    assert(harness.GetState() == StartMenuState::Closed);
+using StartMenuTests::StartMenuTestHarness;
+using StartMenuTests::TestEnvironmentGuard;
+using StartMenu::Abstraction::PlatformCapabilityFlags;
 
-    harness.PressWinKey();
-    assert(harness.GetState() == StartMenuState::OpenRoot);
+#define TEST_ASSERT(expr)                                                                                               \
+    do {                                                                                                                \
+        if (!(expr)) {                                                                                                  \
+            std::cerr << "Assertion failed: " #expr " at " << __FILE__ << ":" << __LINE__ << std::endl;             \
+            return false;                                                                                               \
+        }                                                                                                               \
+    } while (false)
 
-    harness.PressWinKey();
-    assert(harness.GetState() == StartMenuState::Closed);
-    std::cout << "TestWinKeyToggle passed." << std::endl;
+// CONTRACT: menu-open-on-hotkey
+// WINE_RISK: LOW
+bool TestMenuOpenOnHotkey() {
+    PlatformCapabilityFlags flags{};
+    TestEnvironmentGuard guard(flags);
+    StartMenuTestHarness harness(flags);
+
+    TEST_ASSERT(!harness.Shell().IsMenuOpen());
+    TEST_ASSERT(harness.Shell().Hotkeys().TriggerHotkey("menu.toggle"));
+    TEST_ASSERT(harness.Shell().IsMenuOpen());
+    return true;
 }
 
-/**
- * Validates that clicking the Start Button toggles the menu state.
- * Reference: Behavioral Contract 3.0 / Inventory 1.3
- */
-void TestStartButtonClickToggle() {
-    StartMenuTestHarness harness;
-    assert(harness.GetState() == StartMenuState::Closed);
+// CONTRACT: registry-drives-config
+// WINE_RISK: LOW
+bool TestRegistrySettingsAppliedToMenuConfig() {
+    PlatformCapabilityFlags flags{};
+    TestEnvironmentGuard guard(flags);
+    StartMenuTestHarness harness(flags);
 
-    harness.ClickStartButton();
-    assert(harness.GetState() == StartMenuState::OpenRoot);
+    harness.Shell().Registry().WriteString("StartMenu", "Skin", "ClassicTest");
+    harness.Shell().Registry().WriteBool("StartMenu", "ReplaceStartButton", false);
 
-    harness.ClickStartButton();
-    assert(harness.GetState() == StartMenuState::Closed);
-    std::cout << "TestStartButtonClickToggle passed." << std::endl;
+    const auto cfg = harness.Shell().LoadConfiguration();
+    TEST_ASSERT(cfg.skinName == "ClassicTest");
+    TEST_ASSERT(!cfg.replaceStartButton);
+    return true;
 }
 
-/**
- * Validates that the menu closes when losing focus.
- * Reference: Behavioral Contract 3.0 / Inventory 1.4
- */
-void TestDeactivationClosesMenu() {
-    StartMenuTestHarness harness;
-    harness.PressWinKey();
-    assert(harness.GetState() == StartMenuState::OpenRoot);
+// CONTRACT: start-button-replacement
+// WINE_RISK: MEDIUM
+bool TestStartButtonReplacementInitializationPath() {
+    PlatformCapabilityFlags flags{};
+    TestEnvironmentGuard guard(flags);
+    StartMenuTestHarness harness(flags);
 
-    harness.ClickOutside();
-    assert(harness.GetState() == StartMenuState::Closed);
-    std::cout << "TestDeactivationClosesMenu passed." << std::endl;
+    const auto taskbarHandle = harness.Shell().Taskbar().GetPrimaryTaskbar();
+    TEST_ASSERT(taskbarHandle.IsValid());
+    TEST_ASSERT(harness.Shell().Taskbar().ReplaceStartButton(taskbarHandle, "test-image"));
+    return true;
 }
 
-/**
- * Validates the Escape key behavior at different menu levels.
- * Reference: Behavioral Contract 3.0 / Inventory 1.5
- */
-void TestEscapeKeyBehavior() {
-    StartMenuTestHarness harness;
+// CONTRACT: skin-load-fallback
+// WINE_RISK: LOW
+bool TestMissingSkinFileGracefulFallback() {
+    PlatformCapabilityFlags flags{};
+    TestEnvironmentGuard guard(flags);
+    StartMenuTestHarness harness(flags);
 
-    // Root level Esc
-    harness.PressWinKey();
-    harness.PressEscape();
-    assert(harness.GetState() == StartMenuState::Closed);
-
-    // Submenu level Esc
-    harness.PressWinKey();
-    harness.HoverFolder();
-    assert(harness.GetState() == StartMenuState::OpenSubmenu);
-    harness.PressEscape();
-    assert(harness.GetState() == StartMenuState::OpenRoot);
-    harness.PressEscape();
-    assert(harness.GetState() == StartMenuState::Closed);
-
-    std::cout << "TestEscapeKeyBehavior passed." << std::endl;
+    const auto missing = harness.Shell().Skins().LoadSkin("MissingSkin");
+    TEST_ASSERT(!missing.found);
+    const auto fallback = harness.Shell().Skins().GetDefaultSkin();
+    TEST_ASSERT(fallback.found);
+    TEST_ASSERT(fallback.name == "Default");
+    return true;
 }
 
-/**
- * Validates that launching an application closes the menu.
- * Reference: Behavioral Contract 3.0 / Inventory 2.2
- */
-void TestLaunchAppClosesMenu() {
-    StartMenuTestHarness harness;
-    harness.PressWinKey();
-    assert(harness.GetState() == StartMenuState::OpenRoot);
+// CONTRACT: multi-monitor-fallback
+// WINE_RISK: MEDIUM
+bool TestMultiMonitorFallbackSingleDisplay() {
+    PlatformCapabilityFlags flags{};
+    TestEnvironmentGuard guard(flags);
+    StartMenuTestHarness harness(flags);
 
-    harness.LaunchApplication();
-    assert(harness.WasAppLaunched());
-    assert(harness.GetState() == StartMenuState::Closed);
-    std::cout << "TestLaunchAppClosesMenu passed." << std::endl;
+    const auto monitors = harness.Shell().Display().GetMonitors();
+    TEST_ASSERT(monitors.size() == 1);
+    TEST_ASSERT(monitors.front().primary);
+    return true;
 }
 
-/**
- * Validates search state transitions.
- * Reference: Behavioral Contract 3.0 / Inventory 3.1
- */
-void TestSearchTransitions() {
-    StartMenuTestHarness harness;
-    harness.PressWinKey();
+// CONTRACT: menu-population
+// WINE_RISK: MEDIUM
+bool TestShellNamespaceEnumerationPopulation() {
+    PlatformCapabilityFlags flags{};
+    TestEnvironmentGuard guard(flags);
+    StartMenuTestHarness harness(flags);
 
-    harness.TypeInSearch("calc");
-    assert(harness.GetState() == StartMenuState::Searching);
-    assert(harness.GetSearchText() == "calc");
+    const auto items = harness.Shell().PopulateMenu();
+    TEST_ASSERT(items.size() == 1);
+    TEST_ASSERT(items.front().displayName == "Programs");
+    TEST_ASSERT(items.front().children.size() == 1);
+    TEST_ASSERT(items.front().children.front().displayName == "Calculator");
+    return true;
+}
 
-    harness.TypeInSearch("");
-    assert(harness.GetState() == StartMenuState::OpenRoot);
+// CONTRACT: wine-feature-degradation
+// WINE_RISK: HIGH
+bool TestWineCapabilityFlagReducedFeatureSet() {
+    PlatformCapabilityFlags flags{};
+    flags.runningOnWine = true;
+    TestEnvironmentGuard guard(flags);
+    StartMenuTestHarness harness(flags);
 
-    std::cout << "TestSearchTransitions passed." << std::endl;
+    const auto cfg = harness.Shell().LoadConfiguration();
+    TEST_ASSERT(!cfg.enableHighRiskFeatures);
+    return true;
 }
 
 int main() {
-    std::cout << "Running Start Menu Behavioral Reference Model Tests..." << std::endl;
-    try {
-        TestWinKeyToggle();
-        TestStartButtonClickToggle();
-        TestDeactivationClosesMenu();
-        TestEscapeKeyBehavior();
-        TestLaunchAppClosesMenu();
-        TestSearchTransitions();
-        std::cout << "\nAll behavioral reference model tests passed successfully!" << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "Test failed with exception: " << e.what() << std::endl;
-        return 1;
+    const std::vector<std::pair<std::string, std::function<bool()>>> tests = {
+        {"TestMenuOpenOnHotkey", TestMenuOpenOnHotkey},
+        {"TestRegistrySettingsAppliedToMenuConfig", TestRegistrySettingsAppliedToMenuConfig},
+        {"TestStartButtonReplacementInitializationPath", TestStartButtonReplacementInitializationPath},
+        {"TestMissingSkinFileGracefulFallback", TestMissingSkinFileGracefulFallback},
+        {"TestMultiMonitorFallbackSingleDisplay", TestMultiMonitorFallbackSingleDisplay},
+        {"TestShellNamespaceEnumerationPopulation", TestShellNamespaceEnumerationPopulation},
+        {"TestWineCapabilityFlagReducedFeatureSet", TestWineCapabilityFlagReducedFeatureSet},
+    };
+
+    for (const auto& test : tests) {
+        if (!test.second()) {
+            std::cerr << test.first << " failed" << std::endl;
+            return 1;
+        }
+        std::cout << test.first << " passed" << std::endl;
     }
+
+    std::cout << "All StartMenu abstraction tests passed." << std::endl;
     return 0;
 }
+
+// [CODEX] Last modified by: Codex
+// [CODEX] Phase: 3
+// [CODEX] Summary: Replaced reference-model tests with abstraction-layer contract tests.

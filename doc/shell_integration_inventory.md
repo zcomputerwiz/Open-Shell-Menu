@@ -143,3 +143,28 @@ Open-Shell-Menu (formerly Classic Shell) is deeply integrated with the Windows S
 3. **UI Subclasser**: A wrapper for `SetWindowSubclass` that can handle platform differences.
 4. **Shell Item Provider**: An abstraction over PIDLs and `IShellFolder` for testing.
 5. **Explorer Integration Interface**: Abstracting BHO and Toolbar registration.
+
+## 9. Audit Annotations (Codex)
+
+- `SetWindowsHookEx` <!-- VERIFIED: found in Src/StartMenu/StartMenu.cpp:101 and Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:3196 -->
+- `SetWindowSubclass` <!-- VERIFIED: found in Src/StartMenu/StartMenuDLL/MenuContainer.cpp:4121 and Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:3153 -->
+- `FindWindow/FindWindowEx` <!-- VERIFIED: found in Src/StartMenu/StartMenu.cpp:53 and Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:456 -->
+- `RegisterWindowMessage` <!-- VERIFIED: found in Src/StartMenu/StartMenu.cpp:693 and Src/StartMenu/StartMenuDLL/MenuContainer.cpp:7596 -->
+- `ChangeWindowMessageFilterEx` <!-- VERIFIED: dynamically loaded and called in Src/StartMenu/StartMenu.cpp:694-702 -->
+- `RegisterHotKey` <!-- VERIFIED: found in Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:1180-1216 -->
+- `SHAppBarMessage` <!-- VERIFIED: found in Src/StartMenu/StartMenuDLL/StartMenuDLL.cpp:605 and Src/StartMenu/StartMenuDLL/MenuContainer.cpp:8196 -->
+- `SHGetIDListFromObject` <!-- VERIFIED: found in Src/StartMenu/StartMenuDLL/ItemManager.cpp:2399 -->
+- `DwmExtendFrameIntoClientArea` <!-- VERIFIED: found in Src/StartMenu/StartMenuDLL/MenuContainer.cpp:4429 -->
+- `DwmSetWindowAttribute` <!-- VERIFIED: found in Src/StartMenu/StartMenuDLL/StartButton.cpp:149-151 -->
+- `IVirtualDesktopManager` <!-- MISSING FROM CODE: not found in Src/StartMenu via ripgrep -->
+- `ITrayNotify` <!-- MISSING FROM CODE: not found in Src/StartMenu via ripgrep -->
+- `IShellMenu` <!-- MISSING FROM CODE: not found in Src/StartMenu via ripgrep -->
+- `IMenuBand` <!-- MISSING FROM CODE: not found in Src/StartMenu via ripgrep -->
+- `IBandSite` <!-- MISSING FROM CODE: not found in Src/StartMenu via ripgrep -->
+
+- Wine/ReactOS source trees were not present in this workspace snapshot. <!-- NEEDS ABSTRACTION: Wine/ReactOS compatibility claims require follow-up against actual forks referenced in task prompt. -->
+- `RegisterShellHookWindow` usage is not present in current StartMenu sources. <!-- MISSING FROM CODE: not found in Src/StartMenu via ripgrep -->
+
+// [CODEX] Last modified by: Codex
+// [CODEX] Phase: 1
+// [CODEX] Summary: Added source-backed verification annotations and missing API flags.
