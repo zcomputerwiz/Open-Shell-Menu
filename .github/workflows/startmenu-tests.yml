@@ -60,20 +60,34 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-${{ hashFiles('**/*.vcxproj') }}
 
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v1
+
+      - name: Restore NuGet Packages
+        run: nuget restore "${{ github.workspace }}\Src\OpenShell.sln"
+
       - name: Build full solution
-        run: msbuild Open-Shell.sln /p:Configuration=Debug /p:Platform=x64 /m
+        run: msbuild Src/OpenShell.sln /p:Configuration=Debug /p:Platform=x64 /m
 
-      - name: Build test project
-        run: msbuild tests/startmenu/StartMenuTests.vcxproj /p:Configuration=Debug /p:Platform=x64
+      - name: Build abstraction test binary (MSVC)
+        shell: cmd
+        run: |
+          cl /nologo /std:c++17 /EHsc /W4 /WX ^
+            /I Src\StartMenu\Abstraction ^
+            /I Src\StartMenu\Abstraction\StubImplementations ^
+            /I tests\startmenu ^
+            Src\StartMenu\Abstraction\StubImplementations\StubShellIntegration.cpp ^
+            tests\startmenu\StartMenuBehaviorTests.cpp ^
+            /Fe:tests\startmenu\StartMenuBehaviorTests.exe
 
-      - name: Run tests
-        run: tests/startmenu/x64/Debug/StartMenuBehaviorTests.exe
+      - name: Run abstraction tests
+        run: tests/startmenu/StartMenuBehaviorTests.exe
 
       - name: Upload test binary
         uses: actions/upload-artifact@v4
         with:
           name: windows-test-binary
-          path: tests/startmenu/x64/Debug/StartMenuBehaviorTests.exe
+          path: tests/startmenu/StartMenuBehaviorTests.exe
 
   wine-integration:
     runs-on: ubuntu-latest
