@@ -40,7 +40,15 @@ jobs:
 
       - name: Run tests under Wine
         run: |
-          wine64 tests/startmenu/StartMenuBehaviorTests.exe | tee tests/startmenu/results/linux_wine_test_output.txt
+          if command -v wine64 >/dev/null 2>&1; then
+            WINE_BIN=wine64
+          elif command -v wine >/dev/null 2>&1; then
+            WINE_BIN=wine
+          else
+            echo "Neither wine64 nor wine is available on PATH" >&2
+            exit 1
+          fi
+          "$WINE_BIN" tests/startmenu/StartMenuBehaviorTests.exe | tee tests/startmenu/results/linux_wine_test_output.txt
 
       - name: Upload results
         uses: actions/upload-artifact@v4
@@ -135,7 +143,15 @@ jobs:
 
       - name: Run tests under Wine with debug logging
         run: |
-          WINEDEBUG=warn+all,fixme+all wine64 StartMenuBehaviorTests.exe 2>wine_debug.log || true
+          if command -v wine64 >/dev/null 2>&1; then
+            WINE_BIN=wine64
+          elif command -v wine >/dev/null 2>&1; then
+            WINE_BIN=wine
+          else
+            echo "Neither wine64 nor wine is available on PATH" > wine_debug.log
+            exit 0
+          fi
+          WINEDEBUG=warn+all,fixme+all "$WINE_BIN" StartMenuBehaviorTests.exe 2>wine_debug.log || true
           echo "Wine integration execution completed" >> wine_debug.log
 
       - name: Upload Wine debug log
@@ -152,4 +168,4 @@ jobs:
 
 # [CODEX] Last modified by: Codex
 # [CODEX] Phase: 4
-# [CODEX] Summary: Updated Windows job to use __MakeFinal flow plus MSVC developer environment for cl.
+# [CODEX] Summary: Hardened Wine invocation to support runners exposing wine (not only wine64) and kept Windows __MakeFinal/MSVC flow.
