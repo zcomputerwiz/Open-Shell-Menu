@@ -86,6 +86,9 @@ jobs:
         run: |
           call "%GITHUB_WORKSPACE%\Src\Setup\__MakeFinal.bat"
 
+      - name: Setup MSVC developer command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Build abstraction test binary (MSVC)
         shell: cmd
         run: |
@@ -149,4 +152,4 @@ jobs:
 
 # [CODEX] Last modified by: Codex
 # [CODEX] Phase: 4
-# [CODEX] Summary: Updated Windows job to use proven __MakeFinal build flow and required tool dependencies.
+# [CODEX] Summary: Updated Windows job to use __MakeFinal flow plus MSVC developer environment for cl.
