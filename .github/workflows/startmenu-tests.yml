@@ -18,8 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install MinGW-w64
-        run: sudo apt-get update && sudo apt-get install -y g++-mingw-w64-x86-64 python3 wine64
+      - name: Install MinGW-w64 and Wine dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y g++-mingw-w64-x86-64 python3 wine64 wine32:i386 xvfb
 
       - name: Build abstraction layer and tests
         run: |
@@ -30,6 +33,7 @@ jobs:
             -I tests/startmenu \
             Src/StartMenu/Abstraction/StubImplementations/StubShellIntegration.cpp \
             tests/startmenu/StartMenuBehaviorTests.cpp \
+            -static-libgcc -static-libstdc++ \
             -o tests/startmenu/StartMenuBehaviorTests.exe
 
       - name: Check contract coverage
@@ -48,7 +52,7 @@ jobs:
             echo "Neither wine64 nor wine is available on PATH" >&2
             exit 1
           fi
-          "$WINE_BIN" tests/startmenu/StartMenuBehaviorTests.exe | tee tests/startmenu/results/linux_wine_test_output.txt
+          xvfb-run -a "$WINE_BIN" tests/startmenu/StartMenuBehaviorTests.exe | tee tests/startmenu/results/linux_wine_test_output.txt
 
       - name: Upload results
         uses: actions/upload-artifact@v4
@@ -133,8 +137,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Wine
-        run: sudo apt-get update && sudo apt-get install -y wine64
+      - name: Install Wine dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y wine64 wine32:i386 xvfb
 
       - name: Download test binary
         uses: actions/download-artifact@v4
@@ -151,7 +158,7 @@ jobs:
             echo "Neither wine64 nor wine is available on PATH" > wine_debug.log
             exit 0
           fi
-          WINEDEBUG=warn+all,fixme+all "$WINE_BIN" StartMenuBehaviorTests.exe 2>wine_debug.log || true
+          WINEDEBUG=warn+all,fixme+all xvfb-run -a "$WINE_BIN" StartMenuBehaviorTests.exe 2>wine_debug.log || true
           echo "Wine integration execution completed" >> wine_debug.log
 
       - name: Upload Wine debug log
@@ -168,4 +175,4 @@ jobs:
 
 # [CODEX] Last modified by: Codex
 # [CODEX] Phase: 4
-# [CODEX] Summary: Hardened Wine invocation to support runners exposing wine (not only wine64) and kept Windows __MakeFinal/MSVC flow.
+# [CODEX] Summary: Added wine32/i386+xvfb setup and static MinGW runtime linking to stabilize headless Wine test execution.
