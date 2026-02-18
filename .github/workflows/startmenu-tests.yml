@@ -49,16 +49,31 @@ jobs:
           path: tests/startmenu/results/
 
   full-build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: microsoft/setup-msbuild@v2
 
-      - name: Restore NuGet cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ hashFiles('**/*.vcxproj') }}
+      - name: Setup WiX Toolset (v3.14)
+        shell: pwsh
+        run: |
+          $wixPath = "C:\Program Files (x86)\WiX Toolset v3.14"
+          $binPath = Join-Path $wixPath "bin"
+
+          if (-not (Test-Path $binPath)) {
+            choco install wixtoolset --version 3.14.1 --force -y
+          }
+
+          Add-Content -Path $env:GITHUB_PATH -Value $binPath
+          Add-Content -Path $env:GITHUB_ENV -Value "WIX=$wixPath"
+
+      - name: Install HTML Help Workshop
+        shell: pwsh
+        run: |
+          choco install html-help-workshop -y
+          Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\HTML Help Workshop"
 
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
@@ -66,8 +81,10 @@ jobs:
       - name: Restore NuGet Packages
         run: nuget restore "${{ github.workspace }}\Src\OpenShell.sln"
 
-      - name: Build full solution
-        run: msbuild Src/OpenShell.sln /p:Configuration=Debug /p:Platform=x64 /m
+      - name: Run Open-Shell Build Script
+        shell: cmd
+        run: |
+          call "%GITHUB_WORKSPACE%\Src\Setup\__MakeFinal.bat"
 
       - name: Build abstraction test binary (MSVC)
         shell: cmd
@@ -82,6 +99,15 @@ jobs:
 
       - name: Run abstraction tests
         run: tests/startmenu/StartMenuBehaviorTests.exe
+
+      - name: Upload full build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-full-build-artifacts
+          path: |
+            Src/Setup/Final/*.exe
+            Src/Setup/Final/*.msi
+            Src/Setup/Final/*.zip
 
       - name: Upload test binary
         uses: actions/upload-artifact@v4
@@ -123,4 +149,4 @@ jobs:
 
 # [CODEX] Last modified by: Codex
 # [CODEX] Phase: 4
-# [CODEX] Summary: Added Linux abstraction, Windows full build, and Wine integration CI workflow.
+# [CODEX] Summary: Updated Windows job to use proven __MakeFinal build flow and required tool dependencies.
