@@ -1379,6 +1379,38 @@ static HRESULT CreatePinLink( PCIDLIST_ABSOLUTE sourcePidl, const wchar_t *name,
 	return S_OK;
 }
 
+static HRESULT GetShellFolderForNewItem( CComPtr<IShellFolder> &pFolder, const CMenuContainer *pContainer, const ActivateData *pData )
+{
+	CComPtr<IShellFolder> pDesktop;
+#if defined(_IS_REACTOS_)
+	if (g_pReactOSDesktop)
+	{
+		pDesktop = g_pReactOSDesktop;
+	}
+	else
+	{
+		return E_FAIL;
+	}
+#else
+	if (FAILED(SHGetDesktopFolder(&pDesktop)))
+		return E_FAIL;
+#endif
+
+	PCUITEMID_CHILD pidl = nullptr;
+	if (pData && pData->bProgramsTree)
+		pidl = pData->parent;
+	else
+		pidl = (PCUITEMID_CHILD)pContainer->m_Path1[0].Get();
+
+    if (!pidl)
+    {
+        pFolder = pDesktop;
+        return S_OK;
+    }
+
+	return pDesktop->BindToObject(pidl, NULL, IID_IShellFolder, (void**)&pFolder);
+}
+
 // This function "activates" an item. The item can be activated in multiple ways:
 // ACTIVATE_SELECT - select the item, make sure it is visible
 // ACTIVATE_OPEN - if the item is a submenu, it is opened. otherwise the item is just selected (but all submenus are closed first)
@@ -2600,38 +2632,6 @@ void CMenuContainer::ActivateItem( int index, TActivateType type, const POINT *p
 		}
 		res=0;
 	}
-
-static HRESULT GetShellFolderForNewItem( CComPtr<IShellFolder> &pFolder, const CMenuContainer *pContainer, const ActivateData *pData )
-{
-	CComPtr<IShellFolder> pDesktop;
-#if defined(_IS_REACTOS_)
-	if (g_pReactOSDesktop)
-	{
-		pDesktop = g_pReactOSDesktop;
-	}
-	else
-	{
-		return E_FAIL;
-	}
-#else
-	if (FAILED(SHGetDesktopFolder(&pDesktop)))
-		return E_FAIL;
-#endif
-
-	PCUITEMID_CHILD pidl = nullptr;
-	if (pData && pData->bProgramsTree)
-		pidl = pData->parent;
-	else
-		pidl = pContainer->m_Path1[0];
-
-    if (!pidl)
-    {
-        pFolder = pDesktop;
-        return S_OK;
-    }
-
-	return pDesktop->BindToObject(pidl, NULL, IID_IShellFolder, (void**)&pFolder);
-}
 
 	if (res==CMD_NEWFOLDER)
 	{

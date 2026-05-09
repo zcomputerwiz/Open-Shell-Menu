@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "ReactOS_COM_Shim.h"
 
 HRESULT CReactOSShellFolder::CreateInstance(REFIID riid, void **ppv, FolderType folderType)
