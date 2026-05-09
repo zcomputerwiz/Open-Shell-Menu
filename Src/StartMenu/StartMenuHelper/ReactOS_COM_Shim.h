@@ -5,6 +5,14 @@
 #include <vector>
 #include <string>
 
+enum FolderType
+{
+    FOLDER_TYPE_DESKTOP,
+    FOLDER_TYPE_PROGRAMS,
+    FOLDER_TYPE_CONTROLPANEL,
+    FOLDER_TYPE_SETTINGS,
+};
+
 class CReactOSShellFolder;
 
 class CReactOSShellFolderEnum : public IEnumIDList
@@ -28,14 +36,6 @@ private:
     ULONG m_index;
     CReactOSShellFolder *m_pFolder;
     std::vector<std::wstring> m_items;
-};
-
-enum FolderType
-{
-    FOLDER_TYPE_DESKTOP,
-    FOLDER_TYPE_PROGRAMS,
-    FOLDER_TYPE_CONTROLPANEL,
-    FOLDER_TYPE_SETTINGS,
 };
 
 class CReactOSShellFolder : public IShellFolder2

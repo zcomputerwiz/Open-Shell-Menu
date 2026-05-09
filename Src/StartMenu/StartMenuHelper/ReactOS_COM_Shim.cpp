@@ -192,7 +192,7 @@ HRESULT CReactOSShellFolder::CreateChildID(PCWSTR pszName, PITEMID_CHILD *ppidl)
 {
     // A basic implementation that creates a simple ID based on the name
     size_t nameBytes = (wcslen(pszName) + 1) * sizeof(wchar_t);
-    USHORT totalSize = sizeof(USHORT) + nameBytes;
+    USHORT totalSize = (USHORT)(sizeof(USHORT) + nameBytes); 
 
     *ppidl = (PITEMID_CHILD)CoTaskMemAlloc(totalSize + sizeof(USHORT));
     if (!*ppidl)

@@ -2630,10 +2630,9 @@ void CMenuContainer::ActivateItem( int index, TActivateType type, const POINT *p
 			CComPtr<IShellFolder> pDesktop;
 		#ifdef _IS_REACTOS_
 			pDesktop = g_pReactOSDesktop;
+		#else
+			SHGetDesktopFolder(&pDesktop);
 		#endif
-			if (!pDesktop)
-				SHGetDesktopFolder(&pDesktop);
-
 			// 2. Determine which PIDL we are binding to and perform the bind
 			if (pDesktop)
 			{
